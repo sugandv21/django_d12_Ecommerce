@@ -1,13 +1,13 @@
 from django.contrib.auth.decorators import login_required
-from django.core.mail import send_mail, BadHeaderError
+from django.core.mail import send_mail, BadHeaderError, EmailMessage
 from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
-from .forms import OrderCreateForm, ContactForm
 from django.contrib import messages
 from django.contrib.auth import login
-from .forms import SignupForm
+
+from .forms import OrderCreateForm, ContactForm, SignupForm
 from .models import Order, Product
-from .forms import SignupForm
+
 
 def signup(request):
     if request.method == "POST":
@@ -15,26 +15,37 @@ def signup(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-             if user.email:  # only if email is provided
-                body = (
-                    f"Hello {user.username},\n\n"
-                    "Welcome to Contact Book! \n\n"
-                    "Your registration was successful. You can now log in and start adding contacts.\n\n"
-                    "Thanks,\n"
-                    "Contact Book Team"
-                )
-                msg = EmailMessage(
-                    subject="Registration Successful - Contact Book",
-                    body=body,
-                    from_email=settings.DEFAULT_FROM_EMAIL,  # your Gmail
-                    to=[user.email],  # send directly to the registered user
-                )
-                msg.send()
+
+            # Send welcome email if user provided an email
+            try:
+                if user.email:
+                    body = (
+                        f"Hello {user.username},\n\n"
+                        "Welcome to Contact Book!\n\n"
+                        "Your registration was successful. You can now log in and start adding contacts.\n\n"
+                        "Thanks,\n"
+                        "Contact Book Team"
+                    )
+                    msg = EmailMessage(
+                        subject="Registration Successful - Contact Book",
+                        body=body,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        to=[user.email],
+                    )
+                    msg.send(fail_silently=False)
+            except BadHeaderError:
+                messages.error(request, "Invalid header in welcome email.")
+            except Exception as e:
+                # Don't block signup if email fails
+                messages.warning(request, f"Signed up, but welcome email failed: {e}")
+
             messages.success(request, "Welcome! Your account was created.")
             return redirect("order_create")
     else:
         form = SignupForm()
+
     return render(request, "shop/registration/signup.html", {"form": form})
+
 
 @login_required
 def order_create(request):
@@ -42,10 +53,8 @@ def order_create(request):
         form = OrderCreateForm(request.POST)
         if form.is_valid():
             product = form.cleaned_data["product"]
-            order = Order(user=request.user, product=product)
-            # total_amount from product.price (no user control)
-            order.total_amount = product.price
-            order.save()  # save() enforces price again
+            order = Order(user=request.user, product=product, total_amount=product.price)
+            order.save()  # save() also enforces price
 
             subject = f"Order Confirmation — {order.order_id}"
             message = (
@@ -75,14 +84,20 @@ def order_create(request):
     else:
         form = OrderCreateForm()
 
-    # provide product price map for front-end display
-    products = Product.objects.filter(is_active=True).order_by("name").values("id", "name", "price")
-    return render(request, "shop/order_create.html", {"form": form, "products": list(products)})
+    # If you're using the CARD UI, pass a queryset (not .values())
+    products = Product.objects.filter(is_active=True).order_by("name")
+
+    # If you're still using the dropdown + JS price display, uncomment the next line
+    # products = list(Product.objects.filter(is_active=True).order_by("name").values("id", "name", "price"))
+
+    return render(request, "shop/order_create.html", {"form": form, "products": products})
+
 
 @login_required
 def order_success(request, order_id: str):
     order = get_object_or_404(Order, order_id=order_id, user=request.user)
     return render(request, "shop/order_success.html", {"order": order})
+
 
 @login_required
 def contact(request):
@@ -103,7 +118,7 @@ def contact(request):
                     subject=f"[Customer Query] {subject}",
                     message=full_message,
                     from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[settings.ADMIN_EMAIL],
+                    recipient_list=[settings.ADMIN_EMAIL] if isinstance(settings.ADMIN_EMAIL, str) else settings.ADMIN_EMAIL,
                     fail_silently=False,
                 )
                 messages.success(request, "Your message has been sent to the admin.")
@@ -114,5 +129,5 @@ def contact(request):
                 messages.error(request, f"Could not send your message: {e}")
     else:
         form = ContactForm()
-    return render(request, "shop/contact.html", {"form": form})
 
+    return render(request, "shop/contact.html", {"form": form})
