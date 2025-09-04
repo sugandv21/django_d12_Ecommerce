@@ -1,0 +1,47 @@
+{% extends "shop/base.html" %}
+{% block title %}Place Order{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <h2 class="mb-4 text-center">Place Order</h2>
+
+    <form method="post" class="card p-4 shadow-sm" novalidate>
+      {% csrf_token %}
+
+      <div class="mb-3">
+        <label class="form-label" for="id_product">Product</label>
+        {{ form.product }}
+        {% for err in form.product.errors %}
+          <div class="invalid-feedback d-block">{{ err }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Price</label>
+        <input type="text" class="form-control" id="display_price" value="₹0.00" readonly>
+        <div class="form-text">Amount is set by the selected product.</div>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100">Confirm Order</button>
+    </form>
+
+    <p class="text-muted mt-3 text-center">A confirmation email will be sent to your account email.</p>
+  </div>
+</div>
+
+<script>
+  (function(){
+    const products = {{ products|safe }};
+    const select = document.getElementById('id_product');
+    const priceField = document.getElementById('display_price');
+
+    function fmt(n){ try{ return new Intl.NumberFormat(undefined, {style:'currency', currency:'INR'}).format(n); }catch(e){ return '₹' + Number(n).toFixed(2); } }
+    function updatePrice(){
+      const id = Number(select.value);
+      const p = products.find(x => x.id === id);
+      priceField.value = p ? fmt(p.price) : '₹0.00';
+    }
+    if (select){ select.addEventListener('change', updatePrice); updatePrice(); }
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,22 @@
+[
+  {
+    "model": "shop.product",
+    "pk": 1,
+    "fields": { "name": "Wireless Mouse", "price": "799.00", "is_active": true }
+  },
+  {
+    "model": "shop.product",
+    "pk": 2,
+    "fields": { "name": "Mechanical Keyboard", "price": "3499.00", "is_active": true }
+  },
+  {
+    "model": "shop.product",
+    "pk": 3,
+    "fields": { "name": "USB-C Charger 30W", "price": "1299.00", "is_active": true }
+  },
+  {
+    "model": "shop.product",
+    "pk": 4,
+    "fields": { "name": "Noise Cancelling Headphones", "price": "5999.00", "is_active": true }
+  }
+]
