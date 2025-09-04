@@ -22,9 +22,9 @@ def signup(request):
                     body = (
                         f"Hello {user.username},\n\n"
                         "Welcome to Contact Book!\n\n"
-                        "Your registration was successful. You can now log in and start adding contacts.\n\n"
+                        "Your registration was successful. You can now log in and start shopping products.\n\n"
                         "Thanks,\n"
-                        "Contact Book Team"
+                        "eshop Team"
                     )
                     msg = EmailMessage(
                         subject="Registration Successful - Contact Book",
@@ -131,3 +131,4 @@ def contact(request):
         form = ContactForm()
 
     return render(request, "shop/contact.html", {"form": form})
+
